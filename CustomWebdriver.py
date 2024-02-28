@@ -107,6 +107,10 @@ class ChromeBrowser:
                                          selenium_exceptions.ElementClickInterceptedException,
                                          selenium_exceptions.StaleElementReferenceException]
             
+        def find_element(self) -> WebElement:
+            element = self.web_props.driver.find_element(self.find_by, self.search_value)
+            return element
+            
         def wait_element_to_be_present(self, *, timeout=30) -> WebElement:
             wait = WebDriverWait(self.web_props.driver, timeout, ignored_exceptions=self.ignorable_exceptions)
             element = wait.until(EC.presence_of_element_located((self.find_by, self.search_value)))
@@ -119,7 +123,7 @@ class ChromeBrowser:
         
         def click(self, *, timeout=30) -> None:
             wait = WebDriverWait(self.web_props.driver, timeout, ignored_exceptions=self.ignorable_exceptions)
-            element = wait.until(EC.presence_of_element_located((self.find_by, self.search_value)))
+            element = wait.until(EC.element_to_be_clickable((self.find_by, self.search_value)))
             self.web_props.driver.execute_script("arguments[0].scrollIntoView();", element)
             wait.until(lambda d : element.click() or True)
         
@@ -197,8 +201,4 @@ class NoElementFoundError(Error):
 
 if __name__ == "__main__":
     # minimal_task()
-    total = 0
-    for iteration in range(1, total, 10):
-        max_idx = iteration + 1 + (total - iteration)
-        for idx in range(iteration, max_idx):
-            print(idx)
+    pass

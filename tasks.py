@@ -8,11 +8,9 @@ from selenium.webdriver.common.by import By
 from selenium.common import exceptions as selenium_exceptions
 import urllib
 import logging
-from pathlib import Path
 import os
 import re
-
-import time
+import pandas as pd
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] %(asctime)s - %(message)s')
@@ -24,32 +22,42 @@ WORKING_DIR = os.getcwd()
 @task
 def scrap_news_data():
     
-    work_item = workitems.inputs.current
-    item_payload = work_item.payload
-    logging.info(f'item_payload: {item_payload}')
-    excel_path = work_item.get_file(RESULT_FILE_NAME)
+    # work_item = workitems.inputs.current
+    try:
+        for item in workitems.inputs:
+            
+            item_payload = item.payload
+            logging.info(f'item_payload: {item_payload}')
+            excel_path = item.get_file(RESULT_FILE_NAME)
 
-    if not os.path.isdir(fr'{WORKING_DIR}\output\images'):
-        os.makedirs(fr'{WORKING_DIR}\output\images')
+            if not os.path.isdir(fr'{WORKING_DIR}\output\images'):
+                os.makedirs(fr'{WORKING_DIR}\output\images')
 
-    # Calc search time range
-    # ============================================
-    max_date_str, min_date_str = calc_search_time_range(number_of_months=item_payload['number_of_months'])
-    logging.info(f'max_date_str: {max_date_str} - min_date_str: {min_date_str}')
+            # Calc search time range
+            # ============================================
+            max_date_str, min_date_str = calc_search_time_range(number_of_months=item_payload['number_of_months'])
+            logging.info(f'max_date_str: {max_date_str} - min_date_str: {min_date_str}')
 
-    # Search 'The New York Times'
-    # ============================================
-    browser = ChromeBrowser()
-    browser.start_driver()
+            # Search 'The New York Times'
+            # ============================================
+            browser = ChromeBrowser()
+            browser.start_driver()
 
-    execute_search(browser, item_payload['search_phrase'], item_payload['category'],
-                   max_date_str, min_date_str)
-    
-    # Get search result in excel
-    # ============================================
-    get_all_returned_news(browser, excel_path)
+            execute_search(browser, item_payload['search_phrase'], item_payload['category'],
+                        max_date_str, min_date_str)
+            
+            # Get search result in excel
+            # ============================================
+            get_all_returned_news(browser, item_payload['search_phrase'], excel_path)
 
-    time.sleep(10)
+            item.done()
+        
+    except Exception as err:
+        workitems.inputs.current.fail(
+            exception_type='APPLICATION',
+            code='UNCAUGHT_ERROR',
+            message=str(err)
+        )
 
 
 def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
@@ -60,6 +68,10 @@ def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
 
     # Reject cookies
     browser.element(By.ID, 'fides-banner-button-primary').click()
+
+    # Order by newest
+    browser.element(By.XPATH, '//select[@data-testid="SearchForm-sortBy"]').click()
+    browser.element(By.XPATH, '//select[@data-testid="SearchForm-sortBy"]/option[@value="newest"]').click()
 
     # Open calendar
     browser.element(By.XPATH, '//button[@data-testid="search-date-dropdown-a"]').click()
@@ -75,87 +87,119 @@ def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
     browser.element(By.XPATH, time_range_xpath).wait_element_to_be_present()
 
     # Select desired category inside 'Section', if available
-    category = category.capitalize().replace(" ","")
-    section_dropdown = browser.element(By.XPATH, '//button[@data-testid="search-multiselect-button"]')
-    section_dropdown.click()
-    try:
-        browser.element(By.XPATH, 
-                        f'//ul[@data-testid="multi-select-dropdown-list"]//span[contains(text(), "{category}")]').click(timeout=3)
-    except selenium_exceptions.TimeoutException:
-        logging.exception(f'Category: {category} is not an valid option.')
-    section_dropdown.click()
-    time.sleep(10)
-    # //li[@data-testid="search-bodega-result"][position()>=1 and position()<= 10]
+    if category:
+        category = category.capitalize().replace(" ","")
+        section_dropdown = browser.element(By.XPATH, '//button[@data-testid="search-multiselect-button"]')
+        section_dropdown.click()
+        try:
+            browser.element(By.XPATH, 
+                            f'//ul[@data-testid="multi-select-dropdown-list"]//span[contains(text(), "{category}")]').click(timeout=2)
+        except selenium_exceptions.TimeoutException:
+            logging.exception(f'Category: {category} is not an valid option.')
+        section_dropdown.click()
+
+    browser.element(By.XPATH, f'//p[@data-testid="SearchForm-status" and not(contains(text(), "Loading"))]')\
+    .get_element_attribute('innerText', timeout=10)
 
 
-def get_all_returned_news(browser:ChromeBrowser, file_name:str) -> str:
+def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:str) -> str:
 
     money_rgx_str = [
-        r"\$\d+[\.|,]\d+\.{0,1}\d*",
+        r"\$\d+[\.|,]?\d+\.{0,1}\d*",
         r"\d+\s(dollars|USD)"
     ]
 
     results_for_search = browser.element(By.XPATH, '//p[@data-testid="SearchForm-status"]').get_element_attribute('innerText', timeout=10)
-    macth_obj = re.search(r"\d+", results_for_search)
+    macth_obj = re.search(r"out\sof\s(?P<value>\d+[\.\,]?\d*)\sresults", results_for_search)
     if macth_obj:
-        total_results = int(macth_obj.group())
+        total_results = int(macth_obj.group('value').replace(",", "."))
     else:
         total_results = 0
 
     logging.warning(f"Total news: {total_results}")
-    print(f"Total news: {total_results}")
     
     news_payload = []
     for iteration in range(1, total_results, 10):
 
-        max_idx = iteration + 1 + (total_results - iteration)
+        if (total_results - iteration) < 10:
+            max_idx = total_results + 1
+        else:
+            max_idx = iteration + 10
 
         for idx in range(iteration, max_idx):
-            print("Index: ", idx)
 
             news_xpath = f'//li[@data-testid="search-bodega-result"][position()={idx}]'
             
-            title = browser.element(By.XPATH, f'{news_xpath}//h4[@class="css-2fgx4k"]').get_element_attribute('innerText', timeout=1)
-            data = browser.element(By.XPATH, f'{news_xpath}//span[@data-testid="todays-date"]').get_element_attribute('innerText', timeout=1)
-            description = browser.element(By.XPATH, f'{news_xpath}//p[@class="css-16nhkrn"]').get_element_attribute('innerText', timeout=1)
-            image_element = browser.element(By.XPATH, f'{news_xpath}//img[@class="css-rq4mmj"]')
-            img_url = image_element.get_element_attribute('src', timeout=1)
+            title = browser.element(By.XPATH, f'{news_xpath}//h4[@class="css-2fgx4k"]').get_element_attribute('innerText')
+            date = browser.element(By.XPATH, f'{news_xpath}//span[@data-testid="todays-date"]').get_element_attribute('innerText')
 
-            img_name = img_url.rsplit("?", 1)
-            img_name = img_name[0].rsplit("/", 1)[-1].replace(".jpg", ".png")
-            full_img_path = fr'{WORKING_DIR}\output\images\{img_name}'
-            if os.path.isfile(full_img_path):
-                os.remove(full_img_path)
-            
-            image_element.save_image_to_path(full_img_path, timeout=1)
+            description_element = browser.element(By.XPATH, f'{news_xpath}//p[@class="css-16nhkrn"]')
+            try:
+                description_element.find_element()
+            except selenium_exceptions.NoSuchElementException:
+                logging.warning(f"News at index {idx} doesn`t have description.")
+                description = "** No description on Website **"
+            else:
+                description = description_element.get_element_attribute('innerText')
+
+            image_element = browser.element(By.XPATH, f'{news_xpath}//img[@class="css-rq4mmj"]')
+            try:
+                image_element.find_element()
+            except selenium_exceptions.NoSuchElementException:
+                logging.warning(f"News at index {idx} doesn`t have image.")
+                img_name = "** No image on Website **"
+            else:
+                img_url = image_element.get_element_attribute('src', timeout=3)
+                img_name = img_url.rsplit("?", 1)
+                img_name = img_name[0].rsplit("/", 1)[-1].replace(".jpg", ".png")
+                full_img_path = fr'{WORKING_DIR}\output\images\{img_name}'
+                if os.path.isfile(full_img_path):
+                    os.remove(full_img_path)
+                
+                image_element.save_image_to_path(full_img_path)
+
+            # Search for money
+            is_money_present = False
+            for rgx_pattern in money_rgx_str:
+                if re.search(rgx_pattern, title) or re.search(rgx_pattern, description):
+                    is_money_present = True
+                    break
+
+            # Count search parameter
+            search_phrase = search_phrase.lower().strip()
+            total_count = title.lower().count(search_phrase) + description.lower().count(search_phrase)
             
             news_payload.append(
                 {
-                    "title": title,
-                    "data": data,
-                    "description": description,
-                    "file_name": img_name
+                    "Title": title,
+                    "Date": date,
+                    "Description": description,
+                    "Image name": img_name,
+                    "Search frase count": total_count,
+                    "Is money metioned?": is_money_present
                 }
             )
 
         try:
-            browser.element(By.XPATH, '//button[@data-testid="search-show-more-button"]').click(timeout=1)
+            browser.element(By.XPATH, '//button[@data-testid="search-show-more-button"]').click(timeout=3)
         except selenium_exceptions.TimeoutException:
             logging.info('The button "SHOW MORE" wasn`t found, no more news.')
             break
-    
-    print(news_payload)
+
+    df = pd.DataFrame(news_payload)
+    df.to_excel(file_name, index=False)
+
 
 def calc_search_time_range(*, number_of_months:int) -> tuple:
 
     max_date_obj = datetime.datetime.now().date()
     if isinstance(number_of_months, int) and number_of_months > 1:
         min_date_obj = max_date_obj - relativedelta(months=number_of_months - 1)
+        min_date_obj = min_date_obj.replace(day=1)
     else:
         min_date_obj = datetime.datetime.now().replace(day=1)
 
     return max_date_obj.strftime("%m/%d/%Y"), min_date_obj.strftime("%m/%d/%Y")
-
 
 
 if __name__ == "__main__":
