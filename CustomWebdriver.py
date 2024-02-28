@@ -12,7 +12,6 @@ from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.remote.webdriver import WebElement
 import requests
 import os
-import re
 
 
 class ChromeBrowser:

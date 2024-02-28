@@ -22,7 +22,6 @@ WORKING_DIR = os.getcwd()
 @task
 def scrap_news_data():
     
-    # work_item = workitems.inputs.current
     try:
         for item in workitems.inputs:
             
@@ -61,7 +60,7 @@ def scrap_news_data():
 
 
 def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
-                   max_date_str:str, min_date_str:str) -> dict:
+                   max_date_str:str, min_date_str:str) -> None:
 
     new_url = f'https://www.nytimes.com/search?query={urllib.parse.quote_plus(search_phrase)}'
     browser.get_wait_page(new_url)
@@ -102,12 +101,12 @@ def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
     .get_element_attribute('innerText', timeout=10)
 
 
-def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:str) -> str:
+def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:str) -> None:
 
-    money_rgx_str = [
+    MONEY_RGX_PATTERNS = (
         r"\$\d+[\.|,]?\d+\.{0,1}\d*",
         r"\d+\s(dollars|USD)"
-    ]
+    )
 
     results_for_search = browser.element(By.XPATH, '//p[@data-testid="SearchForm-status"]').get_element_attribute('innerText', timeout=10)
     macth_obj = re.search(r"out\sof\s(?P<value>\d+[\.\,]?\d*)\sresults", results_for_search)
@@ -116,7 +115,7 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
     else:
         total_results = 0
 
-    logging.warning(f"Total news: {total_results}")
+    logging.info(f"Total news: {total_results}")
     
     news_payload = []
     for iteration in range(1, total_results, 10):
@@ -152,7 +151,8 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
                 img_url = image_element.get_element_attribute('src', timeout=3)
                 img_name = img_url.rsplit("?", 1)
                 img_name = img_name[0].rsplit("/", 1)[-1].replace(".jpg", ".png")
-                full_img_path = fr'{WORKING_DIR}\output\images\{img_name}'
+                img_name = fr'output\images\{img_name}'
+                full_img_path = fr'{WORKING_DIR}\{img_name}'
                 if os.path.isfile(full_img_path):
                     os.remove(full_img_path)
                 
@@ -160,7 +160,7 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
 
             # Search for money
             is_money_present = False
-            for rgx_pattern in money_rgx_str:
+            for rgx_pattern in MONEY_RGX_PATTERNS:
                 if re.search(rgx_pattern, title) or re.search(rgx_pattern, description):
                     is_money_present = True
                     break
@@ -188,6 +188,7 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
 
     df = pd.DataFrame(news_payload)
     df.to_excel(file_name, index=False)
+    logging.info(f'Excel file created at path: {file_name}')
 
 
 def calc_search_time_range(*, number_of_months:int) -> tuple:
