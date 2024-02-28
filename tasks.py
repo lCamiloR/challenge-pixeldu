@@ -10,6 +10,7 @@ import urllib
 import logging
 from pathlib import Path
 import os
+import re
 
 import time
 
@@ -48,7 +49,7 @@ def scrap_news_data():
     # ============================================
     get_all_returned_news(browser, excel_path)
 
-    # time.sleep(10)
+    time.sleep(10)
 
 
 def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
@@ -83,28 +84,37 @@ def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
     except selenium_exceptions.TimeoutException:
         logging.exception(f'Category: {category} is not an valid option.')
     section_dropdown.click()
-
+    time.sleep(10)
     # //li[@data-testid="search-bodega-result"][position()>=1 and position()<= 10]
 
 
 def get_all_returned_news(browser:ChromeBrowser, file_name:str) -> str:
+
+    money_rgx_str = [
+        r"\$\d+[\.|,]\d+\.{0,1}\d*",
+        r"\d+\s(dollars|USD)"
+    ]
+
+    results_for_search = browser.element(By.XPATH, '//p[@data-testid="SearchForm-status"]').get_element_attribute('innerText', timeout=10)
+    macth_obj = re.search(r"\d+", results_for_search)
+    if macth_obj:
+        total_results = int(macth_obj.group())
+    else:
+        total_results = 0
+
+    logging.warning(f"Total news: {total_results}")
+    print(f"Total news: {total_results}")
     
     news_payload = []
-    min_index = 1
-    max_index = 10
-    while True:
+    for iteration in range(1, total_results, 10):
 
-        # news_xpath = f'//li[@data-testid="search-bodega-result"][position()>={min_index} and position()<= {max_index}]'
-        # try:
-        #     news_element = browser.element(By.XPATH, news_xpath).get_all_elements(timeout=1)
-        # except selenium_exceptions.TimeoutException:
-        #     logging.info(f'No more news found for idexes {min_index} - {max_index}')
+        max_idx = iteration + 1 + (total_results - iteration)
 
-        for idx in range(min_index, max_index):
+        for idx in range(iteration, max_idx):
             print("Index: ", idx)
 
             news_xpath = f'//li[@data-testid="search-bodega-result"][position()={idx}]'
-
+            
             title = browser.element(By.XPATH, f'{news_xpath}//h4[@class="css-2fgx4k"]').get_element_attribute('innerText', timeout=1)
             data = browser.element(By.XPATH, f'{news_xpath}//span[@data-testid="todays-date"]').get_element_attribute('innerText', timeout=1)
             description = browser.element(By.XPATH, f'{news_xpath}//p[@class="css-16nhkrn"]').get_element_attribute('innerText', timeout=1)
@@ -127,9 +137,6 @@ def get_all_returned_news(browser:ChromeBrowser, file_name:str) -> str:
                     "file_name": img_name
                 }
             )
-            
-        min_index += 10
-        max_index += 10
 
         try:
             browser.element(By.XPATH, '//button[@data-testid="search-show-more-button"]').click(timeout=1)

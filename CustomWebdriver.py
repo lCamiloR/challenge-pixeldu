@@ -12,6 +12,7 @@ from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.remote.webdriver import WebElement
 import requests
 import os
+import re
 
 
 class ChromeBrowser:
@@ -103,7 +104,8 @@ class ChromeBrowser:
             self.search_value=value
 
             self.ignorable_exceptions = [selenium_exceptions.ElementNotInteractableException,
-                                         selenium_exceptions.ElementClickInterceptedException]
+                                         selenium_exceptions.ElementClickInterceptedException,
+                                         selenium_exceptions.StaleElementReferenceException]
             
         def wait_element_to_be_present(self, *, timeout=30) -> WebElement:
             wait = WebDriverWait(self.web_props.driver, timeout, ignored_exceptions=self.ignorable_exceptions)
@@ -195,7 +197,8 @@ class NoElementFoundError(Error):
 
 if __name__ == "__main__":
     # minimal_task()
-    browser = ChromeBrowser()
-    browser.start_driver()
-    browser.get_wait_page("https://www.nytimes.com/")
-    x = input()
+    total = 0
+    for iteration in range(1, total, 10):
+        max_idx = iteration + 1 + (total - iteration)
+        for idx in range(iteration, max_idx):
+            print(idx)
