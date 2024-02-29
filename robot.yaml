@@ -2,7 +2,7 @@
 # https://github.com/robocorp/rcc/blob/master/docs/recipes.md#what-is-in-robotyaml
 
 tasks:
-  Search The New York Times:
+  Run Task:
     shell: python -m robocorp.tasks run tasks.py
 
 environmentConfigs:
