@@ -61,6 +61,15 @@ def scrap_news_data():
 
 def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
                    max_date_str:str, min_date_str:str) -> None:
+    """Opens the news website and search for the search frase, than adds the specified filters.
+
+    Args:
+        browser (ChromeBrowser): Object responsable for managing the Webdriver
+        search_phrase (str): Phrase that will be searched on the website
+        category (str): News category to be selected during result filter
+        max_date_str (str): Maximum date of the time range of search (Most recent date)
+        min_date_str (str): Minimum date of the time range of search (Oldest date)
+    """
 
     new_url = f'https://www.nytimes.com/search?query={urllib.parse.quote_plus(search_phrase)}'
     browser.get_wait_page(new_url)
@@ -102,7 +111,13 @@ def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
 
 
 def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:str) -> None:
+    """Iterate all returned news capturing their titles, description and images, saving the data in a excel file.
 
+    Args:
+        browser (ChromeBrowser): Object responsable for managing the Webdriver
+        search_phrase (str): Phrase that will be searched on the website
+        file_name (str): Excel file name
+    """
     MONEY_RGX_PATTERNS = (
         r"\$\d+[\.|,]?\d+\.{0,1}\d*",
         r"\d+\s(dollars|USD)"
@@ -191,7 +206,15 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
     logging.info(f'Excel file created at path: {file_name}')
 
 
-def calc_search_time_range(*, number_of_months:int) -> tuple:
+def calc_search_time_range(*, number_of_months:int) -> tuple[str]:
+    """Calculate the time range that must be applied at the search filter
+
+    Args:
+        number_of_months (int): Number os months to be considered at the filter
+
+    Returns:
+        tuple[str]: Maximum date (Most recent) followed by the minimum date (Oldest date)
+    """
 
     max_date_obj = datetime.datetime.now().date()
     if isinstance(number_of_months, int) and number_of_months > 1:

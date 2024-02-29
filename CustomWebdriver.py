@@ -1,8 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.core.download_manager import WDMDownloadManager
-from webdriver_manager.core.http import HttpClient
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.core.logger import log
 from selenium.webdriver.support import expected_conditions as EC
@@ -10,8 +7,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver import Keys, ActionChains
 from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.remote.webdriver import WebElement
-import requests
 import os
+from RPA.core.webdriver import download
 
 
 class ChromeBrowser:
@@ -27,6 +24,12 @@ class ChromeBrowser:
         self.__chrome_options.add_argument("--no-default-browser-check")
         self.__chrome_options.add_argument("--disable-session-crashed-bubble")
         self.__chrome_options.add_argument('--start-maximized')
+        self.__chrome_options.add_argument('--no-sandbox')
+        self.__chrome_options.add_argument('--remote-debugging-port=9222')
+        self.__chrome_options.add_argument('--disable-web-security')
+        self.__chrome_options.add_argument("--disable-extensions")
+        self.__chrome_options.add_argument("--disable-gpu")
+        self.__chrome_options.add_argument('--headless')
         self.__preferences = {'download.directory_upgrade': True}
 
         self.__preferences['profile.default_content_settings.cookies'] = False
@@ -39,29 +42,9 @@ class ChromeBrowser:
         if default_download_path:
             self.__preferences['download.default_directory'] = self.default_download_path
 
-        if kwargs.get("driver_manager_proxy"):
-            self.__driver_manager_proxy = kwargs.get("driver_manager_proxy")
-        else:
-            self.__driver_manager_proxy = None
-
-    class __CustomHttpClient(HttpClient):
-
-        def __init__(self, *, proxies=None):
-            self.proxies = proxies
-
-        def get(self, url, params=None, **kwargs) -> requests.Response:
-            log("The call will be done with custom HTTP client.")
-            return requests.get(url, params, proxies=self.proxies, verify=False, **kwargs)
-
     def start_driver(self):
 
-        if self.__driver_manager_proxy:
-            http_client = self.__CustomHttpClient(proxies=self.__driver_manager_proxy)
-            download_manager = WDMDownloadManager(http_client)
-        else:
-            download_manager = None
-        
-        downloaded_driver_path = ChromeDriverManager(download_manager=download_manager).install()
+        downloaded_driver_path = download("Chrome")
         driver_service = Service(downloaded_driver_path)
 
         self.driver = webdriver.Chrome(service=driver_service,
@@ -200,4 +183,9 @@ class NoElementFoundError(Error):
 
 if __name__ == "__main__":
     # minimal_task()
-    pass
+    import time
+    browser = ChromeBrowser()
+    browser.start_driver()
+    browser.get_wait_page("https://www.nytimes.com")
+
+    time.sleep(10)
