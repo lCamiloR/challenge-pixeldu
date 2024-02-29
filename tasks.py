@@ -103,11 +103,12 @@ def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
             browser.element(By.XPATH, 
                             f'//ul[@data-testid="multi-select-dropdown-list"]//span[contains(text(), "{category}")]').click(timeout=2)
         except selenium_exceptions.TimeoutException:
-            logging.exception(f'Category: {category} is not an valid option.')
+            logging.warning(f'Category: {category} is not an valid option.')
         section_dropdown.click()
 
     browser.element(By.XPATH, f'//p[@data-testid="SearchForm-status" and not(contains(text(), "Loading"))]')\
     .get_element_attribute('innerText', timeout=10)
+    logging.info(f'Search for "{search_phrase}" is completed.')
 
 
 def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:str) -> None:
@@ -172,6 +173,7 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
                     os.remove(full_img_path)
                 
                 image_element.save_image_to_path(full_img_path)
+                logging.info(f"Image saved at path: {full_img_path}")
 
             # Search for money
             is_money_present = False
