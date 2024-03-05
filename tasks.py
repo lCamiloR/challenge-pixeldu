@@ -28,6 +28,7 @@ def scrap_news_data():
             item_payload = item.payload
             logging.info(f'item_payload: {item_payload}')
             excel_path = item.get_file(RESULT_FILE_NAME)
+            excel_name = os.path.basename(excel_path)
 
             # Calc search time range
             # ============================================
@@ -44,7 +45,7 @@ def scrap_news_data():
             
             # Get search result in excel
             # ============================================
-            get_all_returned_news(browser, item_payload['search_phrase'], excel_path)
+            get_all_returned_news(browser, item_payload['search_phrase'], excel_name)
 
             item.done()
         
