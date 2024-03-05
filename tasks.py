@@ -1,4 +1,5 @@
-from CustomWebdriver import ChromeBrowser
+from custom_webdriver import ChromeBrowser
+from news import News
 
 from robocorp import workitems
 from robocorp.tasks import task
@@ -17,8 +18,6 @@ logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] %(asctime)s - %(message)s')
 
 RESULT_FILE_NAME = "search_result.xlsx"
-
-# WORKING_DIR = os.getcwd()
 
 @task
 def scrap_news_data():
@@ -42,11 +41,15 @@ def scrap_news_data():
             browser.start_driver()
 
             execute_search(browser, item_payload['search_phrase'], item_payload['category'],
-                        max_date_str, min_date_str)
+                           max_date_str, min_date_str)
             
             # Get search result in excel
             # ============================================
-            get_all_returned_news(browser, item_payload['search_phrase'], excel_name)
+            total_news = get_number_total_news(browser)
+            returned_news = get_all_returned_news(browser, total_news)
+            browser.kill()
+            download_images(returned_news)
+            write_output_excel(returned_news, item_payload['search_phrase'], excel_name)
 
             item.done()
         
@@ -56,6 +59,26 @@ def scrap_news_data():
             code='UNCAUGHT_ERROR',
             message=str(err)
         )
+
+
+def calc_search_time_range(*, number_of_months:int) -> tuple[str]:
+    """Calculate the time range that must be applied at the search filter
+
+    Args:
+        number_of_months (int): Number os months to be considered at the filter
+
+    Returns:
+        tuple[str]: Maximum date (Most recent) followed by the minimum date (Oldest date)
+    """
+
+    max_date_obj = datetime.datetime.now().date()
+    if isinstance(number_of_months, int) and number_of_months > 1:
+        min_date_obj = max_date_obj - relativedelta(months=number_of_months - 1)
+        min_date_obj = min_date_obj.replace(day=1)
+    else:
+        min_date_obj = datetime.datetime.now().replace(day=1)
+
+    return max_date_obj.strftime("%m/%d/%Y"), min_date_obj.strftime("%m/%d/%Y")
 
 
 def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
@@ -110,28 +133,33 @@ def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
     logging.info(f'Search for "{search_phrase}" is completed.')
 
 
-def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:str) -> None:
-    """Iterate all returned news capturing their titles, description and images, saving the data in a excel file.
+def get_number_total_news(browser:ChromeBrowser) -> int:
+    """Returns the number of total news found during search.
 
     Args:
         browser (ChromeBrowser): Object responsable for managing the Webdriver
-        search_phrase (str): Phrase that will be searched on the website
-        file_name (str): Excel file name
-    """
-    MONEY_RGX_PATTERNS = (
-        r"\$\d+[\.|,]?\d+\.{0,1}\d*",
-        r"\d+\s(dollars|USD)"
-    )
 
+    Returns:
+        int: number of news.
+    """
     results_for_search = browser.element(By.XPATH, '//p[@data-testid="SearchForm-status"]').get_element_attribute('innerText', timeout=10)
     macth_obj = re.search(r"out\sof\s(?P<value>\d+[\.\,]?\d*)\sresults", results_for_search)
-    if macth_obj:
-        total_results = int(macth_obj.group('value').replace(",", "."))
-    else:
-        total_results = 0
-
+    total_results = int(macth_obj.group('value').replace(",", "."))
     logging.info(f"Total news: {total_results}")
-    
+    return total_results
+
+
+def get_all_returned_news(browser:ChromeBrowser, total_results:int) -> list[News]:
+    """Iterate all returned news capturing their titles, description and images.
+
+    Args:
+        browser (ChromeBrowser): Object responsable for managing the Webdriver
+        total_results (int): Number of news to iterate.
+
+    Returns:
+        list[News]: List of News objects.
+    """
+
     news_payload = []
     for iteration in range(1, total_results, 10):
 
@@ -141,9 +169,7 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
             max_idx = iteration + 10
 
         for idx in range(iteration, max_idx):
-
             news_xpath = f'//li[@data-testid="search-bodega-result"][position()={idx}]'
-            
             title = browser.element(By.XPATH, f'{news_xpath}//h4[@class="css-2fgx4k"]').get_element_attribute('innerText')
             date = browser.element(By.XPATH, f'{news_xpath}//span[@data-testid="todays-date"]').get_element_attribute('innerText')
 
@@ -152,7 +178,7 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
                 description_element.find_element()
             except selenium_exceptions.NoSuchElementException:
                 logging.warning(f"News at index {idx} doesn`t have description.")
-                description = "** No description on Website **"
+                description = None
             else:
                 description = description_element.get_element_attribute('innerText')
 
@@ -161,38 +187,12 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
                 image_element.find_element()
             except selenium_exceptions.NoSuchElementException:
                 logging.warning(f"News at index {idx} doesn`t have image.")
-                img_name = "** No image on Website **"
+                img_url = None
             else:
                 img_url = image_element.get_element_attribute('src', timeout=3)
-                img_name = img_url.rsplit("?", 1)
-                img_name = img_name[0].rsplit("/", 1)[-1]
-                img_name = f'output/{img_name}'
-
-                http = HTTP()
-                http.download(url=img_url, target_file = img_name, overwrite=True)
-                
-                logging.info(f"Image saved at path: {img_name}")
-
-            # Search for money
-            is_money_present = False
-            for rgx_pattern in MONEY_RGX_PATTERNS:
-                if re.search(rgx_pattern, title) or re.search(rgx_pattern, description):
-                    is_money_present = True
-                    break
-
-            # Count search parameter
-            search_phrase = search_phrase.lower().strip()
-            total_count = title.lower().count(search_phrase) + description.lower().count(search_phrase)
             
             news_payload.append(
-                {
-                    "Title": title,
-                    "Date": date,
-                    "Description": description,
-                    "Image name": img_name,
-                    "Search frase count": total_count,
-                    "Is money metioned?": is_money_present
-                }
+                News(title, date, description, img_url)
             )
 
         try:
@@ -201,29 +201,49 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
             logging.info('The button "SHOW MORE" wasn`t found, no more news.')
             break
 
-    df = pd.DataFrame(news_payload)
-    df.to_excel(f'output/{file_name}', index=False)
-    logging.info(f'Excel file created at path: output/{file_name}')
+    return news_payload
 
 
-def calc_search_time_range(*, number_of_months:int) -> tuple[str]:
-    """Calculate the time range that must be applied at the search filter
+def download_images(returned_news:list) -> None:
+    """Downloads the image of each found news.
 
     Args:
-        number_of_months (int): Number os months to be considered at the filter
+        returned_news (list): News returned after search.
+    """
+    http = HTTP()
+    for news in returned_news:
+        if not news.has_img:
+            continue
+        img_path = f'output/{news.get_image_name()}'
+        http.download(url=news.img_url, target_file = img_path, overwrite=True)
+        logging.info(f"Image saved at path: {img_path}")
 
-    Returns:
-        tuple[str]: Maximum date (Most recent) followed by the minimum date (Oldest date)
+
+def write_output_excel(returned_news:list, search_phrase:str, file_name:str) -> None:
+    """Writes the output excel.
+
+    Args:
+        returned_news (list): News returned after search.
+        search_phrase (str): Phrase that will be searched on the website.
+        file_name (str): Base name of the excel file.
     """
 
-    max_date_obj = datetime.datetime.now().date()
-    if isinstance(number_of_months, int) and number_of_months > 1:
-        min_date_obj = max_date_obj - relativedelta(months=number_of_months - 1)
-        min_date_obj = min_date_obj.replace(day=1)
-    else:
-        min_date_obj = datetime.datetime.now().replace(day=1)
+    new_list = []
+    for news in returned_news:
+        new_list.append(
+            {
+                "Title": news.title,
+                "Date": news.date,
+                "Description": news.description,
+                "Image name": news.get_image_name(),
+                "Search frase count": news.count_key_words(search_phrase),
+                "Is money metioned?": news.is_money_metioned()
+            }
+        )
 
-    return max_date_obj.strftime("%m/%d/%Y"), min_date_obj.strftime("%m/%d/%Y")
+    df = pd.DataFrame(new_list)
+    df.to_excel(f'output/{file_name}', index=False)
+    logging.info(f'Excel file created at path: output/{file_name}')
 
 
 if __name__ == "__main__":

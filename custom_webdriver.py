@@ -8,12 +8,12 @@ from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.remote.webdriver import WebElement
 import os
 import logging
-from RPA.core.webdriver import download
+from RPA.core.webdriver import download, start
 
 
 class ChromeBrowser:
 
-    def __init__(self, *, default_language: str = None, default_download_path=None, **kwargs):
+    def __init__(self, *, default_language: str = None, default_download_path=None):
 
         self.driver = None
         self.logger = logging.getLogger(__name__)
@@ -38,10 +38,10 @@ class ChromeBrowser:
         if not default_language:
             self.__chrome_options.add_argument(f"--lang=en-us")
         else:
-            self.__chrome_options.add_argument(f"--lang={self._default_language}")
+            self.__chrome_options.add_argument(f"--lang={default_language}")
 
         if default_download_path:
-            self.__preferences['download.default_directory'] = self.default_download_path
+            self.__preferences['download.default_directory'] = default_download_path
 
     def start_driver(self):
         """Downloads driver for available Chrome version and starts the driver.
@@ -50,8 +50,8 @@ class ChromeBrowser:
         downloaded_driver_path = download("Chrome")
         driver_service = Service(downloaded_driver_path)
 
-        self.driver = webdriver.Chrome(service=driver_service,
-                                       options=self.__chrome_options)
+        self.driver = start("Chrome", driver_service,
+                            options=self.__chrome_options)
         self.logger.info("WebDriver started.")
 
     def kill(self):
@@ -182,40 +182,18 @@ class ChromeBrowser:
             element = wait.until(EC.presence_of_element_located((self.find_by, self.search_value)))
             attribute_value = wait.until(lambda d : element.get_attribute(attribute) or True)
             return attribute_value
-        
-        def save_image_to_path(self, file_path:str, *, timeout=30) -> None:
-            """Wait for element in the DOM according to given locators, then takes as screen shot from it as a PNG.
-
-            Args:
-                file_path (str): Full file path of the screen shot.
-                timeout (int, optional): WebDriverWait timeout. Defaults to 30.
-            """
-            wait = WebDriverWait(self.web_props.driver, timeout, ignored_exceptions=self.ignorable_exceptions)
-            element = wait.until(EC.presence_of_element_located((self.find_by, self.search_value)))
-            wait.until(lambda d : element.is_displayed() or True)
-            with open(file_path, 'wb') as file:
-                file.write(element.screenshot_as_png)
-
 
     @property
-    def default_download_path(self):
-        return self._default_download_path
+    def driver(self):
+        return self._driver
 
-    @default_download_path.setter
-    def default_download_path(self, dir_path):
-        if dir_path and not os.path.isdir(dir_path):
-            raise InvalidInputError("Argument 'dir_path' is not a valid system path.")
-        self._default_download_path = dir_path
-
-    @property
-    def default_language(self):
-        return self._default_language
-
-    @default_language.setter
-    def default_language(self, language):
-        if not isinstance(language, str):
-            raise InvalidInputError("Argument 'language' is not a string.")
-        self._default_language = language
+    @driver.setter
+    def driver(self, value):
+        types = (webdriver.chrome.webdriver.WebDriver, webdriver.remote.webdriver.WebDriver)
+        if value is None or isinstance(value, types):
+            self._driver = value
+        else:
+            raise ValueError(f"Driver value can't be instance of {type(value)}")
 
 
 class Error(Exception):
