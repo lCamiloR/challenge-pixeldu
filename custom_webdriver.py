@@ -182,35 +182,6 @@ class ChromeBrowser:
             attribute_value = wait.until(lambda d : element.get_attribute(attribute) or True)
             return attribute_value
 
-    @property
-    def driver(self):
-        return self._driver
-
-    @driver.setter
-    def driver(self, value):
-        types = (webdriver.chrome.webdriver.WebDriver, webdriver.remote.webdriver.WebDriver)
-        if value is None or isinstance(value, types):
-            self._driver = value
-        else:
-            raise ValueError(f"Driver value can't be instance of {type(value)}")
-
-
-class Error(Exception):
-    """Base class for other exceptions"""
-    pass
-
-
-class InvalidInputError(Exception):
-    def __init__(self, message, received_type=None, received_value=None):
-        self.message = message
-        self.received_type = received_type
-        self.received_value = received_value
-        super().__init__(self.message)
-
-
-class NoElementFoundError(Error):
-    """Raised when no file is found"""
-    pass
 
 if __name__ == "__main__":
     pass

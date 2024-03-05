@@ -23,11 +23,24 @@ class News():
             self.img_url = "** No image on Website **"
 
     def get_image_name(self) -> str:
+        """Returns the image base name on the URL.
+
+        Returns:
+            str: Image base name.
+        """
         img_name = self.img_url.rsplit("?", 1)
         img_name = img_name[0].rsplit("/", 1)[-1]
         return img_name
     
     def count_key_words(self, key_word:str) -> int:
+        """Counts how many times a key word can be found in the title and description.
+
+        Args:
+            key_word (str): key word to be searched.
+
+        Returns:
+            int: Number of occurrences
+        """
         key_word = key_word.lower().strip()
         title_lower = self.title.lower()
         description_lower = self.description.lower()
@@ -39,14 +52,13 @@ class News():
 
         return title_lower.count(key_word) + description_count
     
-    def is_money_metioned(self):
+    def is_money_mentioned(self):
+        """Checks if money is mentioned in the title or description.
+
+        Returns:
+            _type_: _description_
+        """
         for rgx_pattern in MONEY_RGX_PATTERNS:
             if re.search(rgx_pattern, self.title) or re.search(rgx_pattern, self.description):
                 return True
         return False
-
-
-if __name__ == "__main__":
-    pass
-    browser = News("haha","haha", "** No image on Website **", None)
-    print(browser.get_image_name())

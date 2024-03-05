@@ -237,7 +237,7 @@ def write_output_excel(returned_news:list, search_phrase:str, file_name:str) -> 
                 "Description": news.description,
                 "Image name": news.get_image_name(),
                 "Search frase count": news.count_key_words(search_phrase),
-                "Is money metioned?": news.is_money_metioned()
+                "Is money metioned?": news.is_money_mentioned()
             }
         )
 
