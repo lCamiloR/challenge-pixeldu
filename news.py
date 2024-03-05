@@ -44,12 +44,10 @@ class News():
         key_word = key_word.lower().strip()
         title_lower = self.title.lower()
         description_lower = self.description.lower()
-
         if self.has_description:
             description_count = description_lower.count(key_word)
         else:
             description_count = 0
-
         return title_lower.count(key_word) + description_count
     
     def is_money_mentioned(self):
