@@ -3,7 +3,7 @@
         "payload": {
             "search_phrase": "Formula 1",
             "category": "Sports",
-            "number_of_months": 3
+            "number_of_months": 5
         },
         "files": {
             "search_result.xlsx": "search_result.xlsx"

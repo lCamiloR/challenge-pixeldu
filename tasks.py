@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 RESULT_FILE_NAME = "search_result.xlsx"
 
-WORKING_DIR = os.getcwd()
+# WORKING_DIR = os.getcwd()
 
 @task
 def scrap_news_data():
@@ -28,9 +28,6 @@ def scrap_news_data():
             item_payload = item.payload
             logging.info(f'item_payload: {item_payload}')
             excel_path = item.get_file(RESULT_FILE_NAME)
-
-            if not os.path.isdir(fr'{WORKING_DIR}\output\images'):
-                os.makedirs(fr'{WORKING_DIR}\output\images')
 
             # Calc search time range
             # ============================================
@@ -167,13 +164,12 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
                 img_url = image_element.get_element_attribute('src', timeout=3)
                 img_name = img_url.rsplit("?", 1)
                 img_name = img_name[0].rsplit("/", 1)[-1].replace(".jpg", ".png")
-                img_name = fr'output\images\{img_name}'
-                full_img_path = fr'{WORKING_DIR}\{img_name}'
-                if os.path.isfile(full_img_path):
-                    os.remove(full_img_path)
+                img_name = fr'output\{img_name}'
+                if os.path.isfile(img_name):
+                    os.remove(img_name)
                 
-                image_element.save_image_to_path(full_img_path)
-                logging.info(f"Image saved at path: {full_img_path}")
+                image_element.save_image_to_path(img_name)
+                logging.info(f"Image saved at path: {img_name}")
 
             # Search for money
             is_money_present = False
@@ -204,8 +200,8 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
             break
 
     df = pd.DataFrame(news_payload)
-    df.to_excel(file_name, index=False)
-    logging.info(f'Excel file created at path: {file_name}')
+    df.to_excel(fr'output\{file_name}', index=False)
+    logging.info(f'Excel file created at path: output\{file_name}')
 
 
 def calc_search_time_range(*, number_of_months:int) -> tuple[str]:
