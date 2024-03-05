@@ -50,11 +50,11 @@ class News():
             description_count = 0
         return title_lower.count(key_word) + description_count
     
-    def is_money_mentioned(self):
+    def is_money_mentioned(self) -> bool:
         """Checks if money is mentioned in the title or description.
 
         Returns:
-            _type_: _description_
+            bool: True if money is mentioned, False if not.
         """
         for rgx_pattern in MONEY_RGX_PATTERNS:
             if re.search(rgx_pattern, self.title) or re.search(rgx_pattern, self.description):
