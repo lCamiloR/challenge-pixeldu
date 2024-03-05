@@ -227,7 +227,6 @@ def write_output_excel(returned_news:list, search_phrase:str, file_name:str) -> 
         search_phrase (str): Phrase that will be searched on the website.
         file_name (str): Base name of the excel file.
     """
-
     new_list = []
     for news in returned_news:
         new_list.append(
@@ -240,7 +239,6 @@ def write_output_excel(returned_news:list, search_phrase:str, file_name:str) -> 
                 "Is money metioned?": news.is_money_mentioned()
             }
         )
-
     df = pd.DataFrame(new_list)
     df.to_excel(f'output/{file_name}', index=False)
     logging.info(f'Excel file created at path: output/{file_name}')
