@@ -6,7 +6,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver import Keys, ActionChains
 from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.remote.webdriver import WebElement
-import os
 import logging
 from RPA.core.webdriver import download, start
 
