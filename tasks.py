@@ -11,6 +11,7 @@ import logging
 import os
 import re
 import pandas as pd
+from RPA.HTTP import HTTP
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] %(asctime)s - %(message)s')
@@ -164,12 +165,12 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
             else:
                 img_url = image_element.get_element_attribute('src', timeout=3)
                 img_name = img_url.rsplit("?", 1)
-                img_name = img_name[0].rsplit("/", 1)[-1].replace(".jpg", ".png")
-                img_name = fr'output\{img_name}'
-                if os.path.isfile(img_name):
-                    os.remove(img_name)
+                img_name = img_name[0].rsplit("/", 1)[-1]
+                img_name = f'output\\{img_name}'
+
+                http = HTTP()
+                http.download(url=img_url, target_file = img_name, overwrite=True)
                 
-                image_element.save_image_to_path(img_name)
                 logging.info(f"Image saved at path: {img_name}")
 
             # Search for money
@@ -201,8 +202,8 @@ def get_all_returned_news(browser:ChromeBrowser, search_phrase:str, file_name:st
             break
 
     df = pd.DataFrame(news_payload)
-    df.to_excel(fr'output\{file_name}', index=False)
-    logging.info(f'Excel file created at path: output\{file_name}')
+    df.to_excel(f'output\\{file_name}', index=False)
+    logging.info(f'Excel file created at path: output\\{file_name}')
 
 
 def calc_search_time_range(*, number_of_months:int) -> tuple[str]:
