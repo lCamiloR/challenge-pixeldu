@@ -38,7 +38,6 @@ def scrap_news_data():
             # Search 'The New York Times'
             # ============================================
             browser = ChromeBrowser()
-            browser.start_driver()
 
             execute_search(browser, item_payload['search_phrase'], item_payload['category'],
                            max_date_str, min_date_str)
@@ -94,7 +93,7 @@ def execute_search(browser:ChromeBrowser, search_phrase:str, category:str,
     """
 
     new_url = f'https://www.nytimes.com/search?query={urllib.parse.quote_plus(search_phrase)}'
-    browser.get_wait_page(new_url)
+    browser.start_driver(new_url)
 
     # Reject cookies
     browser.element(By.ID, 'fides-banner-button-primary').click()

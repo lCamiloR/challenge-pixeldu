@@ -1,5 +1,4 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from RPA.Browser.Selenium import Selenium
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -7,79 +6,28 @@ from selenium.webdriver import Keys, ActionChains
 from selenium.common import exceptions as selenium_exceptions
 from selenium.webdriver.remote.webdriver import WebElement
 import logging
-from RPA.core.webdriver import download, start
 
 
 class ChromeBrowser:
 
-    def __init__(self, *, default_language: str = None, default_download_path=None):
-
+    def __init__(self):
         self.driver = None
         self.logger = logging.getLogger(__name__)
-        self.__chrome_options = webdriver.ChromeOptions()
-        self.__chrome_options.add_argument("--no-first-run")
-        self.__chrome_options.add_argument('--disable-infobars')
-        self.__chrome_options.add_argument('--ignore-certificate-errors')
-        self.__chrome_options.add_argument('--disable-component-update')
-        self.__chrome_options.add_argument("--no-default-browser-check")
-        self.__chrome_options.add_argument("--disable-session-crashed-bubble")
-        self.__chrome_options.add_argument('--start-maximized')
-        self.__chrome_options.add_argument('--no-sandbox')
-        self.__chrome_options.add_argument('--remote-debugging-port=9222')
-        self.__chrome_options.add_argument('--disable-web-security')
-        self.__chrome_options.add_argument("--disable-extensions")
-        self.__chrome_options.add_argument("--disable-gpu")
-        self.__chrome_options.add_argument('--headless')
-        self.__preferences = {'download.directory_upgrade': True}
 
-        self.__preferences['profile.default_content_settings.cookies'] = False
-
-        if not default_language:
-            self.__chrome_options.add_argument(f"--lang=en-us")
-        else:
-            self.__chrome_options.add_argument(f"--lang={default_language}")
-
-        if default_download_path:
-            self.__preferences['download.default_directory'] = default_download_path
-
-    def start_driver(self):
-        """Downloads driver for available Chrome version and starts the driver.
-        """
-
-        downloaded_driver_path = download("Chrome")
-        driver_service = Service(downloaded_driver_path)
-
-        self.driver = start("Chrome", driver_service,
-                            options=self.__chrome_options)
-        self.logger.info("WebDriver started.")
-
-    def kill(self):
-        if self.driver:
-            self.driver.close()
-
-    def get_wait_page(self, url: str, parameter: dict = None, *, timeout=30) -> str:
-        """This function will access the given URL and wait it to load based on a given parameter.
+    def start_driver(self, url:str) -> None:
+        """Opens available Chrome and starts the driver.
 
         Args:
-            url (str): Url to be requested
-            parameter (dict, optional): EC function to used as the parameter for the WebDriverWait. Defaults to None.
-            timeout (int, optional): WebDriverWait timeout. Defaults to 30.
-
-        Returns:
-            url (str): Return the given url arg when successful
+            url (str): Url to be requested.
         """
-        old_url = self.driver.current_url
-        self.driver.get(url)
-        wait = WebDriverWait(self.driver, timeout)
-        wait.until(EC.url_changes(old_url))
-        if parameter is not None:
-            parameter = parameter.popitem()
-            search_parameter = eval(f'EC.{parameter[0]}')
-            search_parameter_value = parameter[1]
-            if wait.until(search_parameter(search_parameter_value)):
-                return url
-        else:
-            return url
+        browser = Selenium(auto_close=False)
+        browser.open_chrome_browser(url, headless=True)
+        self.driver = browser.driver
+        self.logger.info("WebDriver started.")
+
+    def kill(self) -> None:
+        if self.driver:
+            self.driver.close()
 
     def element(self, find_by=By.ID, value: str = None):
         return self.__Element(web_props=self, find_by=find_by, value=value)
