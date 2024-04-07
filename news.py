@@ -14,18 +14,8 @@ class News():
     def __init__(self, title:str, date:str, description:str = None, img_url:str = None) -> None:
         self.title = title
         self.date = date
-        if description:
-            self.has_description = True
-            self.description = description
-        else:
-            self.has_description = False
-            self.description = "** No description on Website **"
-        if img_url:
-            self.has_img = True
-            self.img_url = img_url
-        else:
-            self.has_img = False
-            self.img_url = "** No image on Website **"
+        self.description = description
+        self.img_url = img_url
 
     def create_image_name(self, base_path:str) -> str:
         """Creates the image local file name.
@@ -61,7 +51,7 @@ class News():
             int: Number of occurrences
         """
         search_phrase = search_phrase.strip()
-        description_count = self.description.count(search_phrase) if self.has_description else 0
+        description_count = self.description.count(search_phrase) if self.description else 0
         return self.title.count(search_phrase) + description_count
     
     def is_money_mentioned(self) -> bool:
