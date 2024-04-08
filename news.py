@@ -61,6 +61,8 @@ class News():
             bool: True if money is mentioned, False if not.
         """
         for rgx_pattern in MONEY_RGX_PATTERNS:
-            if re.search(rgx_pattern, self.title) or re.search(rgx_pattern, self.description):
+
+            match_on_description = re.search(rgx_pattern, self.description) if self.description else None
+            if re.search(rgx_pattern, self.title) or match_on_description:
                 return True
         return False

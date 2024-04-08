@@ -2,8 +2,8 @@
     {
         "payload": {
             "search_phrase": "Formula 1",
-            "category": "",
-            "number_of_months": 7
+            "category": "Sports",
+            "number_of_months": 5
         }
     }
 ]

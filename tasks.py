@@ -7,13 +7,14 @@ import logging
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] %(asctime)s - %(message)s')
 
-RESULT_FILE_NAME = "search_result.xlsx"
+RESULT_FILE_NAME = 'search_result.xlsx'
+IMG_ZIP_FILE_NAME = 'downloaded_images.zip'
 
 @task
 def scrap_news_data():
     
-    for item in workitems.inputs:
-        try:
+    try:
+        for item in workitems.inputs:
             item_payload = item.payload
             logging.info(f'item_payload: {item_payload}')
 
@@ -29,7 +30,6 @@ def scrap_news_data():
 
             # Search 'The New York Times'
             # ============================================
-            browser = ExtendedSelenium()
             new_url = f'https://www.nytimes.com/search?query={urllib.parse.quote_plus(search_phrase)}'
             browser.execute_search(new_url, item_payload['category'], max_date_str,
                                    min_date_str)
@@ -43,16 +43,16 @@ def scrap_news_data():
             else:
                 news_list = browser.get_all_returned_news(total_news)
                 browser.close_all_browsers()
-                browser.download_images(news_list)
+                browser.download_images(news_list, IMG_ZIP_FILE_NAME)
                 browser.write_output_excel(news_list, search_phrase, RESULT_FILE_NAME)
             item.done()
         
-        except Exception as err:
-            item.fail(
-                exception_type='APPLICATION',
-                code='UNCAUGHT_ERROR',
-                message=str(err)
-            )
+    except Exception as err:
+        workitems.inputs.current.fail(
+            exception_type='APPLICATION',
+            code='UNCAUGHT_ERROR',
+            message=str(err)
+        )
 
 
 if __name__ == "__main__":

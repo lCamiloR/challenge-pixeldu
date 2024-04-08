@@ -87,7 +87,7 @@ class ExtendedSelenium(Selenium):
             min_date_str (str): Minimum date of the time range of search (Oldest date)
         """
 
-        self.start_driver(url, headless=False, maximized=True)
+        self.start_driver(url, headless=True, maximized=True)
 
         # Reject cookies
         self.wait_element_enabled_and_click('id:fides-banner-button-primary')
@@ -198,14 +198,15 @@ class ExtendedSelenium(Selenium):
 
         return news_payload
     
-    def download_images(self, returned_news:list[News]) -> None:
+    def download_images(self, returned_news:list[News], zip_name:str) -> None:
         """Downloads the image of each found news.
 
         Args:
             returned_news (list): News returned after search.
+            zip_name (str): Name of the zip folder.
         """
         http = HTTP()
-        with zipfile.ZipFile("output/downloaded_images.zip", "w") as zf:
+        with zipfile.ZipFile(f"output/{zip_name}", "w") as zf:
             for news in returned_news:
                 if not news.img_url:
                     continue
