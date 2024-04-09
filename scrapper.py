@@ -46,7 +46,7 @@ class Scrapper:
             min_date_str (str): Minimum date of the time range of search (Oldest date)
         """
 
-        self.browser.start_driver(url, headless=True, maximized=True)
+        self.browser.start_driver(url, headless=False, maximized=True)
 
         # Reject cookies
         self.browser.wait_element_enabled_and_click(Locators.REJECT_COOKIES_BTN)
@@ -98,6 +98,29 @@ class Scrapper:
             total_results = 0
         self.logger.info(f"Total news: {total_results}")
         return total_results
+    
+    def get_news_attribute(self, locator:str, attribute:str, *, quick_check:bool=True, timeout:int=5) -> str:
+        """Returns the attribute of a given news element.
+
+        Args:
+            locator (str): Targets the element to be clicked.
+            attribute (str): Target attribute.
+            quick_check (bool): If 'True' returns None if ElementNotFound is raised by find_element().
+            timeout (int, optional): WebDriverWait timeout. Defaults to 5.
+
+        Returns:
+            str: String of the element attribute.
+        """
+        if quick_check:
+            try:
+                self.browser.find_element(locator)
+            except ElementNotFound:
+                return None
+        try:
+            return self.browser.wait_element_enabled_and_get_attribute(locator, attribute, timeout=timeout)
+        except AssertionError:
+            return None
+
 
     def get_all_returned_news(self, total_results:int) -> list[News]:
         """Iterate all returned news capturing their titles, description and images.
@@ -118,27 +141,24 @@ class Scrapper:
                 max_idx = iteration + 10
 
             for idx in range(iteration, max_idx):
+
                 news_xpath = f'{Locators.NEWS_LIST_ITEM}[{idx}]'
-                title = self.browser.wait_element_enabled_and_get_attribute(f'{news_xpath}//h4',
-                                                                            'innerText')
-                date = self.browser.wait_element_enabled_and_get_attribute(f'{news_xpath}//span[@data-testid="todays-date"]',
-                                                                           'innerText')
 
-                try:
-                    description_element = self.browser.find_element(f'{news_xpath}//a/p[1]')
-                except ElementNotFound:
-                    self.logger.warning(f"News at index {idx} doesn`t have description.")
-                    description = None
-                else:
-                    description = self.browser.wait_element_enabled_and_get_attribute(description_element, 'innerText')
+                title = self.get_news_attribute(f'{news_xpath}//h4', 'innerText', quick_check=False)
+                if not title:
+                    self.logger.warning(f"News at index {idx} doesn`t have Title.")
+                
+                date = self.get_news_attribute(f'{news_xpath}//span[@data-testid="todays-date"]', 'innerText')
+                if not date:
+                    self.logger.warning(f"News at index {idx} doesn`t have a Date.")
 
-                try:
-                    image_element = self.browser.find_element(f'{news_xpath}//img')
-                except ElementNotFound:
-                    self.logger.warning(f"News at index {idx} doesn`t have image.")
-                    img_url = None
-                else:
-                    img_url = self.browser.wait_element_enabled_and_get_attribute(image_element, 'src')
+                description = self.get_news_attribute(f'{news_xpath}//a/p[1]', 'innerText')
+                if not description:
+                    self.logger.warning(f"News at index {idx} doesn`t have a Description.")
+
+                img_url = self.get_news_attribute(f'{news_xpath}//img', 'src')
+                if not img_url:
+                    self.logger.warning(f"News at index {idx} doesn`t have a image.")
                 
                 news_payload.append(
                     News(title, date, description, img_url)
@@ -184,8 +204,8 @@ class Scrapper:
         for news in returned_news:
             new_list.append(
                 {
-                    "Title": news.title,
-                    "Date": news.date,
+                    "Title": news.title if news.title else "** No title on Website **",
+                    "Date": news.date if news.date else "** No date on Website **",
                     "Description": news.description if news.description else "** No description on Website **",
                     "Image name": os.path.basename(news.img_local_path) if news.img_url else "** No image on Website **",
                     "Search frase count": news.count_search_phrase(search_phrase),
