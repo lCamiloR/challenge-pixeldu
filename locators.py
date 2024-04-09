@@ -1,7 +1,7 @@
 class Locators:
     REJECT_COOKIES_BTN = 'id:fides-banner-button-primary'
     SORT_BY_DROPDOWN = '//select[@data-testid="SearchForm-sortBy"]'
-    SORT_BY_NEWEST = f'//option[contains(text(), "Sort by Newest")]'
+    SORT_BY_NEWEST = f'//option[contains(., "Sort by Newest")]'
     DATE_RANGE_DROPDOWN = '//button[@data-testid="search-date-dropdown-a"]'
     SPECIFIC_DATES_BTN = '//button[@aria-label="Specific Dates"]'
     START_DATE_INPUT = 'id:startDate'
