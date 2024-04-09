@@ -67,7 +67,7 @@ class Scrapper:
         # Select desired category inside 'Section', if available
         if category:
             category = category.capitalize().replace(" ","")
-            target_section_xpath = f'{Locators.SECTION_DROPDOWN_OPTIONS}[contains(text(),"{category}")]'
+            target_section_xpath = f'{Locators.SECTION_DROPDOWN_OPTIONS}[contains(.,"{category}")]'
             try:
                 self.browser.find_element(Locators.SECTION_DROPDOWN)
                 self.browser.wait_element_enabled_and_click(Locators.SECTION_DROPDOWN, timeout=5)
@@ -93,7 +93,8 @@ class Scrapper:
         results_for_search = self.browser.wait_element_enabled_and_get_attribute(Locators.RESULT_COUNT, 'innerText')
         macth_obj = re.search(r"out\sof\s(?P<value>[0-9\.\,]+)\sresults", results_for_search)
         if macth_obj:
-            total_results = int(macth_obj.group('value').replace(",", "."))
+            total_results = re.sub(r'[\.,]', '', macth_obj.group('value'))
+            total_results = int(total_results)
         else:
             total_results = 0
         self.logger.info(f"Total news: {total_results}")
