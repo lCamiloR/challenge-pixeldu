@@ -1,0 +1,13 @@
+class Locators:
+    REJECT_COOKIES_BTN = 'id:fides-banner-button-primary'
+    SORT_BY_DROPDOWN = '//select[@data-testid="SearchForm-sortBy"]'
+    SORT_BY_NEWEST = f'//option[contains(text(), "Sort by Newest")]'
+    DATE_RANGE_DROPDOWN = '//button[@data-testid="search-date-dropdown-a"]'
+    SPECIFIC_DATES_BTN = '//button[@aria-label="Specific Dates"]'
+    START_DATE_INPUT = 'id:startDate'
+    END_DATE_INPUT = 'id:endDate'
+    SECTION_DROPDOWN = '//button[@data-testid="search-multiselect-button"]'
+    SECTION_DROPDOWN_OPTIONS = '//div[@data-testid="section"]//li//span'
+    RESULT_COUNT = '//p[@data-testid="SearchForm-status"]'
+    NEWS_LIST_ITEM = '//li[@data-testid="search-bodega-result"]'
+    SHOW_MORE_BTN = '//button[@data-testid="search-show-more-button"]'
