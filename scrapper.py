@@ -69,9 +69,8 @@ class Scrapper:
             category = category.capitalize().replace(" ","")
             target_section_xpath = f'{Locators.SECTION_DROPDOWN_OPTIONS}[contains(.,"{category}")]'
             try:
-                self.browser.find_element(Locators.SECTION_DROPDOWN)
                 self.browser.wait_element_enabled_and_click(Locators.SECTION_DROPDOWN, timeout=5)
-            except ElementNotFound:
+            except AssertionError:
                 self.logger.warning('The "Section" filter is not available.')
             else:
                 try:
