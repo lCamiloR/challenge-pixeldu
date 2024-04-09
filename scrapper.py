@@ -46,7 +46,7 @@ class Scrapper:
             min_date_str (str): Minimum date of the time range of search (Oldest date)
         """
 
-        self.browser.start_driver(url, headless=False, maximized=True)
+        self.browser.start_driver(url, headless=True, maximized=True)
 
         # Reject cookies
         self.browser.wait_element_enabled_and_click(Locators.REJECT_COOKIES_BTN)
