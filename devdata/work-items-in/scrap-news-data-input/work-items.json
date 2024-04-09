@@ -1,9 +1,9 @@
 [
     {
         "payload": {
-            "search_phrase": "Formula 1",
-            "category": "Sports",
-            "number_of_months": 5
+            "search_phrase": "Oil",
+            "category": "Bussines",
+            "number_of_months": 2
         }
     }
 ]

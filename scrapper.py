@@ -46,7 +46,7 @@ class Scrapper:
             min_date_str (str): Minimum date of the time range of search (Oldest date)
         """
 
-        self.browser.start_driver(url, headless=False, maximized=True)
+        self.browser.start_driver(url, headless=True, maximized=True)
 
         # Reject cookies
         self.browser.wait_element_enabled_and_click(Locators.REJECT_COOKIES_BTN)
@@ -118,14 +118,14 @@ class Scrapper:
                 max_idx = iteration + 10
 
             for idx in range(iteration, max_idx):
-                news_xpath = f'{Locators.NEWS_LIST_ITEM}[position()={idx}]'
-                title = self.browser.wait_element_enabled_and_get_attribute(f'{news_xpath}//a/h4',
+                news_xpath = f'{Locators.NEWS_LIST_ITEM}[{idx}]'
+                title = self.browser.wait_element_enabled_and_get_attribute(f'{news_xpath}//h4',
                                                                             'innerText')
                 date = self.browser.wait_element_enabled_and_get_attribute(f'{news_xpath}//span[@data-testid="todays-date"]',
                                                                            'innerText')
 
                 try:
-                    description_element = self.browser.find_element(f'{news_xpath}//a/p[position()=1]')
+                    description_element = self.browser.find_element(f'{news_xpath}//a/p[1]')
                 except ElementNotFound:
                     self.logger.warning(f"News at index {idx} doesn`t have description.")
                     description = None
@@ -133,7 +133,7 @@ class Scrapper:
                     description = self.browser.wait_element_enabled_and_get_attribute(description_element, 'innerText')
 
                 try:
-                    image_element = self.browser.find_element(f'{news_xpath}//img[ancestor::figure[@aria-label="media"]]')
+                    image_element = self.browser.find_element(f'{news_xpath}//img')
                 except ElementNotFound:
                     self.logger.warning(f"News at index {idx} doesn`t have image.")
                     img_url = None
